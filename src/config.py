@@ -2,7 +2,7 @@ from functools import lru_cache
 from typing import Optional
 
 from dotenv import load_dotenv
-from pydantic import AnyHttpUrl
+from pydantic import AliasChoices, AnyHttpUrl, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 load_dotenv()
@@ -17,7 +17,9 @@ class Settings(BaseSettings):
     mongo_db: str = "transcript_pipeline"
     mongo_collection: str = "transcripts"
     callback_url: AnyHttpUrl
-    channel_ids_raw: Optional[str] = None
+    channel_ids_raw: Optional[str] = Field(
+        default=None, validation_alias=AliasChoices("CHANNEL_IDS", "CHANNEL_IDS_RAW")
+    )
     channel_id: Optional[str] = None
     hub_url: AnyHttpUrl = "https://pubsubhubbub.appspot.com/subscribe"
     hub_secret: Optional[str] = None
