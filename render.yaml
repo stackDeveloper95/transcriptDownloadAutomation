@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: transcript-pipeline
+    env: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: MONGO_URL
+        sync: false
+      - key: MONGO_DB
+        value: transcript_pipeline
+      - key: MONGO_COLLECTION
+        value: transcripts
+      - key: CALLBACK_URL
+        sync: false
+      - key: HUB_URL
+        value: https://pubsubhubbub.appspot.com/subscribe
+      - key: HUB_SECRET
+        sync: false
+      - key: CHANNEL_IDS
+        sync: false
