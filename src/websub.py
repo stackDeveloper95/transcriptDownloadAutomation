@@ -21,6 +21,20 @@ def parse_video_id(payload: bytes) -> Optional[str]:
     return video_nodes[0].text
 
 
+def parse_channel_id(payload: bytes) -> Optional[str]:
+    try:
+        root = ElementTree.fromstring(payload)
+    except ElementTree.ParseError as err:
+        logger.warning("Failed to parse WebSub payload: %s", err)
+        return None
+
+    ns = {"yt": "http://www.youtube.com/xml/schemas/2015"}
+    channel_nodes = root.findall(".//yt:channelId", ns)
+    if not channel_nodes:
+        return None
+    return channel_nodes[0].text
+
+
 def verify_signature(signature_header: Optional[str], secret: Optional[str], body: bytes) -> bool:
     if not secret:
         return True

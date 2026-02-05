@@ -1,10 +1,14 @@
+import logging
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, Request, Response
 from fastapi.responses import PlainTextResponse
 
 from .config import get_settings
 from .storage import get_transcript, init_db, upsert_transcript
 from .transcript_service import fetch_transcript
-from .websub import parse_video_id, verify_signature
+from .websub import parse_channel_id, parse_video_id, verify_signature
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 settings = get_settings()
 app = FastAPI(title="Transcript Pipeline")
@@ -31,11 +35,13 @@ def websub_verify(
     raise HTTPException(status_code=400, detail="Invalid verification request")
 
 
-def process_video(video_id: str) -> None:
+def process_video(video_id: str, channel_id: str | None) -> None:
     transcript = fetch_transcript(video_id)
     if not transcript:
+        logger.warning("Transcript unavailable for video %s", video_id)
         return
-    upsert_transcript(video_id=video_id, transcript_text=transcript)
+    upsert_transcript(video_id=video_id, transcript_text=transcript, channel_id=channel_id)
+    logger.info("Stored transcript for video %s (channel=%s)", video_id, channel_id)
 
 
 @app.post("/websub", status_code=202)
@@ -47,10 +53,12 @@ async def websub_notify(request: Request, background_tasks: BackgroundTasks) -> 
         raise HTTPException(status_code=400, detail="Invalid signature")
 
     video_id = parse_video_id(body)
+    channel_id = parse_channel_id(body)
     if not video_id:
         raise HTTPException(status_code=202, detail="No video id found")
 
-    background_tasks.add_task(process_video, video_id)
+    logger.info("Received upload notification video=%s channel=%s", video_id, channel_id)
+    background_tasks.add_task(process_video, video_id, channel_id)
     return Response(status_code=202)
 
 
